@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace HugeArray
 {
-    class HugeArray<T> where T : struct
+    public class HugeArray<T> where T : struct
     {
         List<T[]> array;
         long MAXSIZE = 10000000;
@@ -16,16 +18,22 @@ namespace HugeArray
         {
             var n = count / MAXSIZE;
             array = new List<T[]>();
-            while (count - array.Count * MAXSIZE > MAXSIZE)
-                array.Add(new T[MAXSIZE]);
-            array.Add(new T[count - array.Count * MAXSIZE]);
-            //for (var i = 0; i < n; i++)
-            //{
-            //    long j = 0;
-            //    foreach (var item in array)
-            //        j += item != null ? item.LongLength : 0;
-            //    array[i] = count - j > MAXSIZE ? new T[MAXSIZE] : new T[count - j];
-            //}
+            try
+            {
+                while (count - array.Count * MAXSIZE > MAXSIZE)
+                {
+                    array.Add(new T[MAXSIZE]);
+                    //Thread.Sleep(100);
+                }
+
+                array.Add(new T[count - array.Count * MAXSIZE]);
+            }
+#pragma warning disable CS0168 // Переменная объявлена, но не используется
+            catch (Exception ex)
+#pragma warning restore CS0168 // Переменная объявлена, но не используется
+            {
+                Console.WriteLine("Создаваемый массив размерностью {0} слишком велик, был создан массив максимальной размерностью: {1} ", count, array.Count * MAXSIZE);
+            }
         }
 
         /// <summary>
@@ -49,11 +57,17 @@ namespace HugeArray
         /// <returns></returns>
         public T this[long index] { get
             {
-                return array[(int)(index / MAXSIZE)][index - (index / MAXSIZE * MAXSIZE)];//array[index];
+                T x;  
+                lock (array[(int)(index / MAXSIZE)])
+                { x = array[(int)(index / MAXSIZE)][index - (index / MAXSIZE * MAXSIZE)]; }
+                return x;
             }
             set
             {
-                array[(int)(index / MAXSIZE)][index - (index / MAXSIZE * MAXSIZE)] = value;
+                lock (array[(int)(index / MAXSIZE)])
+                {
+                    array[(int)(index / MAXSIZE)][index - (index / MAXSIZE * MAXSIZE)] = value;
+                }
             }
         }
     }
